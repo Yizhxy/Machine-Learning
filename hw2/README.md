@@ -37,4 +37,7 @@ SGD:
 ```powershell
 python logistic_gd.py --batch_size 16 --epoch 1000
 ```
-
+Newton:
+```powershell
+python logistic_newton.py
+```
