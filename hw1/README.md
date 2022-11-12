@@ -10,7 +10,7 @@
 
   线性模型是参数对扩展自变量的线性组合，在二维平面中表示为一条直线，在高维空间中表示为一个超平面.数学表示为
 $$
-f~\theta~(x)=\theta _{0}+\theta _{1}x_{1}+...+\theta _{n}x_{n}\\
+f_{\theta}(x)=\theta _{0}+\theta _{1}x_{1}+...+\theta _{n}x_{n}\\
 f:R^{n}\to R
 $$
 令$$ X=[x_{1},...,x_{n}]^{T} \theta=[\theta_{1},...,\theta_{n}]^{T} 则 f可表示为f=\theta_{0}+\theta^{T}X,若扩展自变量X=$$ $$[1,x_{1},...,x_{n}]^{T} 同时令\theta=[\theta_{0},\theta_{1},...,\theta_{n}]^{T}，则$$
