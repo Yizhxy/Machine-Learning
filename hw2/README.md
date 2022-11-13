@@ -19,8 +19,19 @@
       --train
           -x.txt
     	  -y.txt
+    --Iris
+      --test
+    	  -x.txt
+    	  -y.txt
+      --train
+          -x.txt
+    	  -y.txt
 --logistic_gd.py
+--logistic_newton.py
+--softmax.py
 ```
+
+#### Logistic
 
 ##### Start training
 
@@ -41,3 +52,10 @@ Newton:
 ```powershell
 python logistic_newton.py
 ```
+
+#### Softmax
+
+```powershell
+python softmax.py
+```
+
