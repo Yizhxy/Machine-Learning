@@ -8,6 +8,8 @@
 
 [Exam dataset](http://www.nustm.cn/member/rxia/ml/data/Exam.zip)
 
+[Iris](http://www.nustm.cn/member/rxia/ml/data/Iris.zip)
+
 ##### Files
 
 ```java
