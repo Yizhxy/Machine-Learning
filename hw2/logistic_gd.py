@@ -7,72 +7,53 @@ import numpy as np
 
 
 def sigmoid(x):
-    if x > 100:
-        return 1
-    elif x < -100:
-        return 0
-    else:
-        return 1.0 / (1 + math.exp(-x))
+    return 1.0 / (1 + math.exp(-x))
 
 
-def get_data(path):
-    data = path
-    with open(data + "/x.txt", "r") as f:
-        _ = f.readlines()
-        x = []
-        for i in range(len(_)):
-            j = _[i].split(' ')
-            x.append(float(j[0]))
-            x.append(float(j[1]))
-            x.append(1.)
-        x = np.array(x).reshape(-1, 3)
-    with open(data + "/y.txt", "r") as f:
-        _ = f.readlines()
-        y = []
-        for i in range(len(_)):
-            y.append(int(_[i].split('\n')[0]))
-        y = np.array(y)
-        assert x.shape[0] == y.shape[0], "the shape of x and y are inconsistent"
-        x = np.mat(x)
-        x0_min = x[:, 0].min()
-        x0_max = x[:, 0].max()
-        x1_min = x[:, 1].min()
-        x1_max = x[:, 1].max()
-    return x, y, x0_min, x1_min, x0_max, x1_max
+def load_data(path):
+    X_train = np.loadtxt(path + "/train/x.txt")
+    Y_train = np.loadtxt(path + "/train/y.txt", dtype=int)
+    X_test = np.loadtxt(path + "/test/x.txt")
+    Y_test = np.loadtxt(path + "/test/y.txt", dtype=int)
+    return X_train, Y_train, X_test, Y_test
+
 
 
 class Logistic:
     def __init__(self, args):
-        self.x_train, self.y_train, self.x0_min, self.x1_min, self.x0_max, self.x1_max = get_data(args.data + '/train')
-        self.x_train[:, 0] = (self.x_train[:, 0] - self.x0_min) / (self.x0_max - self.x0_min)
-        self.x_train[:, 1] = (self.x_train[:, 1] - self.x1_min) / (self.x1_max - self.x1_min)
-        self.x_test, self.y_test, _, __, _, _ = get_data(args.data + '/test')
-        self.x_test[:, 0] = (self.x_test[:, 0] - self.x0_min) / (self.x0_max - self.x0_min)
-        self.x_test[:, 1] = (self.x_test[:, 1] - self.x1_min) / (self.x1_max - self.x1_min)
+        self.x_train, self.y_train, self.x_test, self.y_test = load_data(args.data)
         self.batch_size = args.batch_size
-        self.theta = [-1.0, 1.0, 1.0]
+        # self.theta = [-1.0, 1.0, 1.0]
+        self.theta = np.zeros((1, 3))
         self.bs = 0
         self.lr = args.lr
         self.epoch = args.epoch
         self.lr_decay = args.lr_decay
         self.is_decay = args.is_decay
+        self.M = self.x_train.shape[1]
+        self.N = self.x_train.shape[0]
+
+    def normalization(self):
+        # 均值方差归一化
+        mean = np.mean(self.x_train)
+        variance = np.std(self.x_train)
+        self.x_train = (self.x_train - mean) / variance
+        self.x_train = np.insert(self.x_train, 0, values=1.0, axis=1)
+        self.y_train = self.y_train.reshape(self.N, 1)
+        self.M += 1
 
     def shuffle(self):
         # 实现的功能并非shuffle，而是随机挑选数据
-        _x, _y = [], []
+        _x = np.zeros((self.batch_size, 3))
+        _y = np.zeros(self.batch_size)
         if self.batch_size == -1:
-            for i in range(self.y_train.shape[0]):
-                _x.append(self.x_train[i])
-                _y.append(self.y_train[i])
-            return _x, _y
+            return self.x_train, self.y_train
         batch_size = self.batch_size
         max_index = int(self.y_train.shape[0]) - 1
-        _x, _y = [], []
         for i in range(batch_size):
             _ = random.randint(0, max_index)
-            _x.append(self.x_train[_])
-            _y.append(self.y_train[_])
-        test = _x[0][0, 1]
+            _x[i] = self.x_train[_]
+            _y[i] = self.y_train[_]
         return _x, _y
 
     def forward(self):
@@ -81,25 +62,25 @@ class Logistic:
         plt.show()
 
     def gradient(self):
-        g0 = 0
-        g1 = 0
-        g2 = 0
+        l = 0
+        g = np.zeros((1, 3))
         x, y = self.shuffle()
         for i in range(len(y)):
-            _ = (y[i] - sigmoid(self.theta[2] +
-                                self.theta[0] * x[i][0, 0] + self.theta[1] * x[i][0, 1]))
-            g0 += _ * x[i][0, 0]
-            g1 += _ * x[i][0, 1]
-            g2 += _
-        return g0, g1, g2
+            _ = sigmoid(x[i] @ self.theta.T)
+            g += (y[i] - _) * x[i]
+            if y[i] == 1:
+                l += math.log(_)
+            else:
+                l += math.log(1 - _)
+        return g, l
 
     def validate(self):
         theta = self.theta
-        x_test = self.x_test
-        y_test = self.y_test
+        x_test = self.x_train
+        y_test = self.y_train
         TP, FP, FN, TN = 0, 0, 0, 0
         for i in range(len(y_test)):
-            predict = 1 if theta[0] * x_test[i, 0] + theta[1] * x_test[i, 1] + theta[2] >= 0 else 0
+            predict = 1 if float(x_test[i] @ self.theta.T) >= 0 else 0
             label = y_test[i]
             if predict == 0 and label == 0:
                 TN += 1
@@ -115,12 +96,10 @@ class Logistic:
         acc = (TP + TN) / (TP + TN + FP + FN)
         return precision, recall, F, acc
 
-    def plot(self):
-        pass
-
     def train(self):
         # if self.batch_size != -1:
         # self.shuffle()
+        self.normalization()
         plt.ion()
         plt.figure(figsize=(10, 5))
         precision, recall, F, acc = [], [], [], []
@@ -131,11 +110,9 @@ class Logistic:
             _i.append(i)
             if i % 100 == 0 and self.is_decay:
                 self.lr = self.lr * self.lr_decay
-            g0, g1, g2 = self.gradient()
-            _loss.append(g0)
-            self.theta[0] += g0 * self.lr
-            self.theta[1] += g1 * self.lr
-            self.theta[2] += g2 * self.lr
+            g, l = self.gradient()
+            self.theta += self.lr * g
+            _loss.append(l)
             _precision, _recall, _F, _acc = self.validate()
             print("epoch:{} acc:{}".format(i, _acc))
             precision.append(_precision)
@@ -145,15 +122,15 @@ class Logistic:
             plt.cla()
             plt.subplot(1, 2, 1)
             plt.title("gd with lr decay" if self.is_decay else "gd without lr decay")
-            plt.xlim((0, 1000))
-            plt.ylim((0, 5))
+            plt.xlim((0, self.epoch))
+            plt.ylim((-20, 0))
             plt.xlabel("epoch")
-            plt.ylabel("loss")
+            plt.ylabel("likelihood")
             plt.plot(_i, _loss)
             # plt.figure(2)
             plt.subplot(1, 2, 2)
             plt.title("metrics")
-            plt.xlim((0, 1000))
+            plt.xlim((0, self.epoch))
             plt.ylim((0, 1))
             plt.xlabel("epoch")
             plt.ylabel("per")
@@ -174,12 +151,11 @@ class Logistic:
 
 
 if __name__ == '__main__':
-    get_data('./data/Exam/train')
     parser = argparse.ArgumentParser(
         description=__doc__)
     parser.add_argument('--data', default='./data/Exam', help='data path')
     parser.add_argument('--lr', default=0.01, type=float, help='learning rate')
-    parser.add_argument('--epoch', default=1000, type=int, help='epoch')
+    parser.add_argument('--epoch', default=500, type=int, help='epoch')
     parser.add_argument('--batch_size', default=16, type=int, help='batch_size')
     parser.add_argument('--lr_decay', default=0.9, type=float, help='learning rate decay')
     parser.add_argument('--is_decay', default=True, type=bool, help='choose to use decay')
