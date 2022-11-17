@@ -22,8 +22,8 @@ class Logistic(object):
         # M:特征数，N：样本数
         self.M = X_train.shape[1]
         self.N = X_train.shape[0]
+        self.normalization()
         self.theta = -np.ones((self.M, 1))
-        self.train()
 
     def normalization(self):
         # 均值方差归一化
@@ -41,20 +41,34 @@ class Logistic(object):
         return H
 
     def Newton_method(self):
-        self.theta = -np.ones((self.M, 1))
+        plt.ion()
         for i in range(100):
             H = self.sigmoid(self.X_train)
             J = np.dot(self.X_train.T, (H - self.Y_train))  # M*1
             Hession = np.dot(H.T, self.X_train).dot(self.X_train.T).dot((1.0 - H)) / self.N
             self.theta -= np.dot(J, np.linalg.inv(Hession))
             loss = -np.sum(self.Y_train * np.log(H) + (1.0 - self.Y_train) * np.log(1 - H)) / self.N
+            plt.xlim((-2, 2))
+            plt.ylim((-2, 2))
+            for j in range(self.X_train.shape[0]):
+                if self.Y_train[j] == 0:
+                    plt.plot(self.X_train[j][1], self.X_train[j][2], 'or')
+                else:
+                    plt.plot(self.X_train[j][1], self.X_train[j][2], 'ob')
+            p1 = -(self.theta[0][0] + self.theta[1][0] * 2) / self.theta[2][0]
+            p2 = -(self.theta[0][0] + self.theta[1][0] * -2) / self.theta[2][0]
+            plt.plot([2, -2], [p1, p2])
+            plt.pause(0.001)
+            plt.clf()
             print("iter: %d, loss: %f" % (i, loss))
+        plt.ioff()
+        plt.show()
 
     def train(self):
-        self.normalization()
         self.Newton_method()
 
 
 if __name__ == "__main__":
     X_train, Y_train, X_test, Y_test = load_data()
-    Logistic(X_train, Y_train)
+    model=Logistic(X_train, Y_train)
+    model.train()
