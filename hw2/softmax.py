@@ -15,14 +15,16 @@ def load_data(path):
     Y_train = np.loadtxt(path + "/train/y.txt", dtype=int)
     X_test = np.loadtxt(path + "/test/x.txt")
     Y_test = np.loadtxt(path + "/test/y.txt", dtype=int)
-    return X_test, Y_test, X_test, Y_test
+    return X_train, Y_train, X_test, Y_test
 
 
 class Softmax(object):
-    def __init__(self, X_train, Y_train, epoch, lr, is_decay, lr_decay, batch_size):
+    def __init__(self, X_train, Y_train, X_test, Y_test, epoch, lr, is_decay, lr_decay, batch_size):
         self.loss = None
         self.X_train = X_train
         self.Y_train = Y_train
+        self.X_test = X_test
+        self.Y_test = Y_test
         # M:特征数，N:样本数 L:类别数
         self.M = X_train.shape[1]
         self.N = X_train.shape[0]
@@ -41,7 +43,10 @@ class Softmax(object):
         variance = np.std(self.X_train)
         self.X_train = (self.X_train - mean) / variance
         self.X_train = np.insert(self.X_train, 0, values=1.0, axis=1)
+        self.X_test = (self.X_test - mean) / variance
+        self.X_test = np.insert(self.X_test, 0, values=1.0, axis=1)
         self.Y_train = self.Y_train.reshape(self.N, 1)
+        self.Y_test = self.Y_test.reshape(self.X_test.shape[0], 1)
         self.M += 1
 
     def train(self):
@@ -53,14 +58,14 @@ class Softmax(object):
             self.theta += self.lr * g
             plt.xlim((-3, 3))
             plt.ylim((-3, 3))
-            for i in range(self.X_train.shape[0]):
+            for i in range(self.X_test.shape[0]):
                 # if you want to train on your own dataset you should change this part
-                if self.Y_train[i] == 0:
-                    plt.plot(self.X_train[i][1], self.X_train[i][2], 'or')
-                elif self.Y_train[i] == 1:
-                    plt.plot(self.X_train[i][1], self.X_train[i][2], 'ob')
-                elif self.Y_train[i] == 2:
-                    plt.plot(self.X_train[i][1], self.X_train[i][2], 'oy')
+                if self.Y_test[i] == 0:
+                    plt.plot(self.X_test[i][1], self.X_test[i][2], 'or')
+                elif self.Y_test[i] == 1:
+                    plt.plot(self.X_test[i][1], self.X_test[i][2], 'ob')
+                elif self.Y_test[i] == 2:
+                    plt.plot(self.X_test[i][1], self.X_test[i][2], 'oy')
             p1 = np.zeros((self.L, 2))
             p2 = np.zeros((self.L, 2))
             for j in range(self.L):
@@ -79,6 +84,8 @@ class Softmax(object):
             plt.clf()
         plt.ioff()
         plt.show()
+        plt.pause(5)
+        plt.close('all')
 
     def shuffle(self):
         # 实现的功能并非shuffle，而是随机挑选数据
@@ -111,14 +118,15 @@ class Softmax(object):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description=__doc__)
-    parser.add_argument('--data_path', default='./data/Iris', help='data path')
+    parser.add_argument('--data_path', default='./data/Exam', help='data path')
     parser.add_argument('--lr', default=0.01, type=float, help='learning rate')
-    parser.add_argument('--epoch', default=1000, type=int, help='epoch')
+    parser.add_argument('--epoch', default=200, type=int, help='epoch')
     parser.add_argument('--batch_size', default=16, type=int, help='batch_size')
     parser.add_argument('--lr_decay', default=0.9, type=float, help='learning rate decay')
     parser.add_argument('--is_decay', default=True, type=bool, help='choose to use decay')
     args = parser.parse_args()
     X_train, Y_train, X_test, Y_test = load_data(args.data_path)
-    model = Softmax(X_train, Y_train, epoch=args.epoch, lr=args.lr, is_decay=args.is_decay, lr_decay=args.lr_decay,
+    model = Softmax(X_train, Y_train, X_test, Y_test, epoch=args.epoch, lr=args.lr, is_decay=args.is_decay,
+                    lr_decay=args.lr_decay,
                     batch_size=args.batch_size)
     model.train()
