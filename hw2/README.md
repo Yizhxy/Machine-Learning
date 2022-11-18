@@ -106,3 +106,6 @@ python softmax.py
 
 #### Result
 
+<img src="Figure_2.png" alt="Figure_1" style="zoom:100%;" />
+
+<img src="Figure_3.png" alt="Figure_1" style="zoom:67%;" />
