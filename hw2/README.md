@@ -1,5 +1,7 @@
 # Logistic+Softmax
 
+[TOC]
+
 ## Logistic
 
 ### 模型假设
@@ -51,7 +53,7 @@ $$
 
 [Exam dataset](http://www.nustm.cn/member/rxia/ml/data/Exam.zip)
 
-[Iris](http://www.nustm.cn/member/rxia/ml/data/Iris.zip)
+[Iris dataset](http://www.nustm.cn/member/rxia/ml/data/Iris.zip)
 
 #### Files
 
@@ -85,13 +87,13 @@ $$
 GD：
 
 ```powershell
-python logistic_gd.py --batch_size -1 --epoch 500
+python logistic_gd.py --batch_size -1 --epoch 200
 ```
 
 SGD:
 
 ```powershell
-python logistic_gd.py --batch_size 16 --epoch 1000
+python logistic_gd.py --batch_size 16 --epoch 200
 ```
 Newton:
 ```powershell
@@ -100,12 +102,56 @@ python logistic_newton.py
 
 ##### Softmax
 
+GD:
+
+​	Exam数据集:
+
 ```powershell
-python softmax.py
+python softmax.py --data_path ./data/Exam --batch_size -1 --epoch 200
 ```
+
+​	Iris数据集:
+
+```powershell
+python softmax.py --data_path ./data/Iris --batch_size -1 --epoch 200
+```
+
+SGD:
+
+​	Exam数据集
+
+```powershell
+python softmax.py --data_path ./data/Exam --batch_size 16 --epoch 200
+```
+
+​	Iris数据集
+
+```powershell
+python softmax.py --data_path ./data/Iris --batch_size 16 --epoch 200
+```
+
+
 
 #### Result
 
+logistic通过SGD在Exam数据集上的表现
+
 <img src="Figure_2.png" alt="Figure_1" style="zoom:100%;" />
 
-<img src="Figure_3.png" alt="Figure_1" style="zoom:67%;" />
+softmax通过SGD在Iris数据集上的表现
+
+<img src="Figure_4.png" alt="Figure_1" style="zoom:67%;" />
+
+#### Analysis
+
+从结果中很容易看出logiatic和softmax在exam和iris数据上的表现较好，但却出现在测试集上的明显低于训练集上的表现
+
+##### 产生问题的可能原因
+
+* 数据量太少或训练集测试集划分不合理
+* 出现过拟合现象
+
+##### 解决思路
+
+* 获取更多的数据
+* 采用正则化，防止模型过拟合
