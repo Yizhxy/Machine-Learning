@@ -1,48 +1,5 @@
 # Logistic+Softmax
 
-[TOC]
-
-## Logistic
-
-### 模型假设
-
-$$
-\delta(z)=\frac{1}{1+e^{-z}} \\
-p(y=1|x;\theta)=h(x)=\delta(\theta^{T}x)\\
-p(y=0|x;\theta)=1-h(x)
-$$
-
-统一形式
-$$
-p(y|x;\theta)=h(x)^{y}*(1-h(x))^{1-y}=(\frac{1}{1+e^{-\theta^T X}})^{y}(1-\frac{1}{1+e^{--\theta^T X}})^{1-y}
-$$
-
-
-### 最优化目标
-
-由于模型的假设是通过条件概率的形式表达，那么很自然最优化的目标就是最大化似然函数
-$$
-L(\theta)=\prod_{k=1}^{N}p(y^{(k)}|x^{(k)};\theta)\\
-=\prod_{k=1}^{N}h(x^{(k)})^{y^{(k)}}*(1-h(x^{(k)}))^{1-y^(k)}\\
-=\prod_{k=1}^{N}=(\frac{1}{1+e^{-\theta^T x^{(k)}}})^{y^{(k)}}(1-\frac{1}{1+e^{-\theta^T x^{(k)}}})^{1-y^{(k)}}
-$$
-即
-$$
-\theta^{*}=\arg\max\limits_{\theta}L(\theta)=\arg\max\limits_{\theta}\log(L(\theta))\\
-\log(L(\theta))=\sum_{k=1}^{N}y^{(k)}\log(h(x^{(k)}))*(1-y^{(k)})\log(1-h(x^{(k)}))
-$$
-
-
-### 学习算法
-
-#### 梯度下降(上升)
-
-#### 牛顿法
-
-### 预测
-
-## 实验
-
 #### Requirements
 
 * python 3.7
@@ -134,6 +91,8 @@ python softmax.py --data_path ./data/Iris --batch_size 16 --epoch 200
 
 #### Result
 
+(动态过程可通过运行程序获得)
+
 logistic通过SGD在Exam数据集上的表现
 
 <img src="Figure_2.png" alt="Figure_1" style="zoom:100%;" />
@@ -141,6 +100,35 @@ logistic通过SGD在Exam数据集上的表现
 softmax通过SGD在Iris数据集上的表现
 
 <img src="Figure_4.png" alt="Figure_1" style="zoom:67%;" />
+
+#### logistic与softmax比较
+
+##### 模型:
+
+(1)logistic模型用于二分类而softmax用来解决多分类问题
+
+(2)softmax输出每一类的概率值，并确定概率最大的类是预测的类，logistic只区别是与不是，当分类类别数量为2的时候softmax与logistic是等价的
+
+##### 结果：
+
+因为logistic只适用于二分类，所以在Exam上比较两者的结果
+
+|          | acc(训练集)  | acc(测试集) | 收敛epoch |
+| :------: | :----------: | :---------: | :-------: |
+| logistic |   0.84375    |     75%     |   约100   |
+| softmax  | 0.82812(avg) |     75%     |   约150   |
+
+由模型中的(2)得知在二分类上softmax是与logistic等价的但在实验中却不完全相同。分析原因：由于softmax的参数更多，所以训练的稳定性不如logistic，虽然在调整参数的情况下acc也能达到0.84,但在多组实验的平均结果下的表现不如logistic.
+
+补充:
+
+由于logistic中只有一组参数，可以直接通过参数画出分类直线，可视化效果非常直观。而对于二分类问题，softmax有两组参数对应两条直线，分别预测概率在得到最终结果，所以想要得到最终的分类直线(多分类任务可能表现为分类区域)需要对得到的参数进行再处理.
+
+#### Details
+
+在计算分类评估指标的时候常常遇见如下错误             <img src="dividedby0.png" alt="Figure_1" style="float:left" /> 
+
+原因是因为分母为0，观察公式可以知道，当分母为0的时候，分子也为0，此时我们直接置该除法表达式的值为0
 
 #### Analysis
 
