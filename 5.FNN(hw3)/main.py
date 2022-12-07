@@ -6,12 +6,24 @@ import math
 import random
 import matplotlib as mpl
 
+
 def load_data(path):
     X_train = np.loadtxt(path + "/train/x.txt")
     Y_train = np.loadtxt(path + "/train/y.txt", dtype=int)
     X_test = np.loadtxt(path + "/test/x.txt")
     Y_test = np.loadtxt(path + "/test/y.txt", dtype=int)
     return X_train, Y_train, X_test, Y_test
+
+
+def cross_entropy(y_hat, t, c):
+    _y = np.zeros((y_hat.shape[0], c))
+    for i in range(y_hat.shape[0]):
+        _ = int(t[i][0])
+        _y[i][_] = 1
+    ans = np.zeros((y_hat.shape[0], 1))
+    for i in range(y_hat.shape[0]):
+        ans[i] = -np.sum(_y * np.log(y_hat))
+    return np.mean(ans)
 
 
 class Linear:
@@ -34,39 +46,32 @@ class Linear:
 
 
 class Softmax:
-    def __init__(self, input_dim, output_dim):
-        self.linear_layer = Linear(input_dim, output_dim)
+    def __init__(self):
         self.x = None
-        self.s_matrix = np.zeros((output_dim, output_dim))
 
     def forward(self, x):
         self.x = x
-        x = self.linear_layer.forward(x)
         _ = np.zeros(x.shape)
         for i in range(_.shape[0]):
             _[i] = np.exp(x[i]) / np.sum(np.exp(x[i]))
         return _
 
     def bp(self, gradient):
-        _ = self.linear_layer.bp(gradient)
-        return _
+        return gradient
 
 
 class Sigmoid:
-    def __init__(self, input_dim, output_dim=1):
-        self.linear_layer = Linear(input_dim, output_dim)
+    def __init__(self):
         self.z = None
 
     def forward(self, x):
         # param x:[B,input_dim]
-        _ = self.linear_layer.forward(x)
-        self.z = 1 / (1 + np.exp(-_))
+        self.z = 1 / (1 + np.exp(-x))
         return self.z
 
     def bp(self, gradient):
         _ = self.z * (1 - self.z)
-        a = self.linear_layer.bp(gradient * _)
-        return a
+        return gradient * _
 
 
 class FNN:
@@ -90,17 +95,17 @@ class FNN:
 
     def init_model(self):
         creat_model = []
-        creat_model.append(Sigmoid(self.M, 2 * self.M - 1))
-        creat_model.append(Softmax(2 * self.M - 1, self.L))
+        creat_model.append(Linear(self.M, 2 * self.M - 1))
+        creat_model.append(Sigmoid())
+        creat_model.append(Linear(2 * self.M - 1, self.L))
+        creat_model.append(Softmax())
         return creat_model
 
     def normalization(self):
         mean = np.mean(self.X_train)
         variance = np.std(self.X_train)
         self.X_train = (self.X_train - mean) / variance
-        # self.X_train = np.insert(self.X_train, 0, values=1.0, axis=1)
         self.X_test = (self.X_test - mean) / variance
-        # self.X_test = np.insert(self.X_test, 0, values=1.0, axis=1)
         self.Y_train = self.Y_train.reshape(self.N, 1)
         self.Y_test = self.Y_test.reshape(self.X_test.shape[0], 1)
 
@@ -152,27 +157,40 @@ class FNN:
             predict = np.argmax(y_hat[i])
             if predict == y[i]:
                 T += 1
-        #print(T / x.shape[0])
+        # print(T / x.shape[0])
         return T / x.shape[0]
 
     def train(self):
         x, y = self.shuffle()
         _ = self.forward(x)
+        loss = cross_entropy(_, y,self.L)
         self.bp(_, y)
+        return loss
 
     def main(self):
         plt.ion()
-        plt.figure(figsize=(7, 3))
+        plt.figure(figsize=(10, 3))
         _acc_train, _acc_test, _i = [], [], []
+        _loss = []
         for i in range(self.epoch):
-            self.train()
+            _loss.append(self.train())
             acc_train = self.eval(is_training=True)
             acc_test = self.eval()
             _i.append(i)
             _acc_train.append(acc_train)
             _acc_test.append(acc_test)
             plt.cla()
-            plt.subplot(1, 2, 1)
+
+            plt.subplot(1, 3, 1)
+            plt.title("gd")
+            plt.xlim((0, self.epoch))
+            plt.ylim((0, 50))
+            plt.xlabel("epoch")
+            plt.ylabel("avg loss")
+            loss_line, = plt.plot(_i, _loss, 'b')
+            plt.legend((loss_line,), ('train',), loc='upper right', fontsize='small')
+
+            plt.subplot(1, 3, 2)
             plt.xlim((0, self.epoch))
             plt.ylim((0, 1))
             plt.xlabel("epoch")
@@ -181,9 +199,9 @@ class FNN:
             line2, = plt.plot(_i, _acc_test, 'b')
             plt.legend((line1, line2), ('train', 'test'), loc='lower right', fontsize='small')
 
-            plt.subplot(1, 2, 2)
+            plt.subplot(1, 3, 3)
             X = self.X_train
-            plot_step = 0.10
+            plot_step = 0.05
             x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
             y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
             xx, yy = np.meshgrid(np.arange(x_min, x_max, plot_step),
@@ -195,7 +213,9 @@ class FNN:
             plt.pcolormesh(xx, yy, grid_hat, cmap=cm_light)  # 此处的xx,yy必须是网格采样点
             # plt.pcolormesh()会根据grid_hat的结果自动在cmap里选择颜色,作用在于能够直观表现出分类边界
             cm_dark = mpl.colors.ListedColormap(['g', 'r', 'y'])
-            plt.scatter(self.X_train[:, 0], self.X_train[:, 1], c=self.Y_train, edgecolors='k', s=50, cmap=cm_dark)  # 用散点图把样本点画上去
+            plt.scatter(self.X_train[:, 0], self.X_train[:, 1], c=self.Y_train, edgecolors='k', s=50,
+                        cmap=cm_dark)  # 用散点图把样本点画上去
+            plt.scatter(self.X_test[:, 0], self.X_test[:, 1], c=self.Y_test, edgecolors='k', s=50, cmap=cm_dark)
 
             plt.pause(0.001)
             plt.clf()
@@ -208,7 +228,7 @@ class FNN:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description=__doc__)
-    parser.add_argument('--data_path', default='./data/Iris', help='data path')
+    parser.add_argument('--data_path', default='./data/Exam', help='data path')
     parser.add_argument('--lr', default=0.05, type=float, help='learning rate')
     parser.add_argument('--epoch', default=1000, type=int, help='epoch')
     parser.add_argument('--batch_size', default=32, type=int, help='batch_size')
