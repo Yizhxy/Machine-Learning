@@ -16,6 +16,12 @@ def load_data(path):
 
 
 def cross_entropy(y_hat, t, c):
+    '''
+    :param y_hat: 预测分布
+    :param t: 真实标签 为一个标量
+    :param c: 类别数目
+    :return: 交叉熵
+    '''
     _y = np.zeros((y_hat.shape[0], c))
     for i in range(y_hat.shape[0]):
         _ = int(t[i][0])
@@ -27,21 +33,29 @@ def cross_entropy(y_hat, t, c):
 
 
 class Linear:
-    def __init__(self, input_dim, output_dim, lr=0.01):
+    def __init__(self, input_dim, output_dim, L2=0., lr=0.01):
+        '''
+        :param L2:L2正则化系数
+        '''
         self.x = None
         self.theta = np.zeros((input_dim, output_dim))
         self.bias = np.ones((1, output_dim))
+        self.n = (input_dim + 1) * output_dim
         self.lr = lr
+        self.L2 = L2
 
     def forward(self, x):
         # param x: [B,input_dim]
         self.x = x
         return x @ self.theta + self.bias
 
+    def weights(self):
+        return self.L2 / 2 * (np.sum(self.theta ** 2) + np.sum(self.theta ** 2)) / self.n
+
     def bp(self, gradient):
         # param loss:[B,output_dim]
-        self.theta -= self.lr * (self.x.T @ gradient)
-        self.bias -= self.lr * np.ones((1, gradient.shape[0])) @ gradient
+        self.theta = self.theta * (1 - self.lr * self.L2 / self.n) - self.lr * (self.x.T @ gradient)
+        self.bias = self.bias * (1 - self.lr * self.L2 / self.n) - self.lr * np.ones((1, gradient.shape[0])) @ gradient
         return gradient @ self.theta.T
 
 
@@ -74,6 +88,37 @@ class Sigmoid:
         return gradient * _
 
 
+class Tanh:
+    def __init__(self):
+        self.z = None
+        self.net = Sigmoid()
+
+    def forward(self, x):
+        self.z = 2 * self.net.forward(2 * x) - 1
+        return 2 * self.net.forward(2 * x) - 1
+
+    def bp(self, gradient):
+        return gradient * (1 - self.z ** 2)
+
+
+class LeakyRelu:
+    def __init__(self, a=0.1):
+        # a=0时为Relu
+        self.m = None
+        self.a = a
+        pass
+
+    def forward(self, x):
+        self.m = (x <= 0)
+        out = x.copy()
+        out[self.m] = self.a * out[self.m]
+        return out
+
+    def bp(self, gradient):
+        gradient[self.m] = 0
+        return gradient
+
+
 class FNN:
     def __init__(self, opt, X_train, Y_train, X_test, Y_test, epoch, lr, is_decay, lr_decay, batch_size):
         self.loss = None
@@ -95,9 +140,9 @@ class FNN:
 
     def init_model(self):
         creat_model = []
-        creat_model.append(Linear(self.M, 2 * self.M - 1))
+        creat_model.append(Linear(self.M, 2 * self.M - 1, L2=0.1))
         creat_model.append(Sigmoid())
-        creat_model.append(Linear(2 * self.M - 1, self.L))
+        creat_model.append(Linear(2 * self.M - 1, self.L, L2=0.1))
         creat_model.append(Softmax())
         return creat_model
 
@@ -163,7 +208,10 @@ class FNN:
     def train(self):
         x, y = self.shuffle()
         _ = self.forward(x)
-        loss = cross_entropy(_, y,self.L)
+        loss = cross_entropy(_, y, self.L)
+        for i in range(len(self.model)):
+            if isinstance(self.model[i], Linear):
+                loss += self.model[i].weights()
         self.bp(_, y)
         return loss
 
@@ -201,7 +249,7 @@ class FNN:
 
             plt.subplot(1, 3, 3)
             X = self.X_train
-            plot_step = 0.05
+            plot_step = 0.10
             x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
             y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
             xx, yy = np.meshgrid(np.arange(x_min, x_max, plot_step),
@@ -228,7 +276,7 @@ class FNN:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description=__doc__)
-    parser.add_argument('--data_path', default='./data/Exam', help='data path')
+    parser.add_argument('--data_path', default='./data/Iris', help='data path')
     parser.add_argument('--lr', default=0.05, type=float, help='learning rate')
     parser.add_argument('--epoch', default=1000, type=int, help='epoch')
     parser.add_argument('--batch_size', default=32, type=int, help='batch_size')
