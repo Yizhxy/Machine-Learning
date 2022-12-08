@@ -28,14 +28,14 @@ def cross_entropy(y_hat, t, c):
         _y[i][_] = 1
     ans = np.zeros((y_hat.shape[0], 1))
     for i in range(y_hat.shape[0]):
-        ans[i] = -np.sum(_y * np.log(y_hat))
+        ans[i] = -np.sum(_y[i] * np.log(y_hat[i]))
     return np.mean(ans)
 
 
 class Linear:
     def __init__(self, input_dim, output_dim, L2=0., lr=0.01):
         '''
-        :param L2:L2正则化系数
+        :param L2:L2正则化系数[0,1)
         '''
         self.x = None
         self.theta = np.zeros((input_dim, output_dim))
@@ -232,7 +232,7 @@ class FNN:
             plt.subplot(1, 3, 1)
             plt.title("gd")
             plt.xlim((0, self.epoch))
-            plt.ylim((0, 50))
+            #plt.ylim((0, 1))
             plt.xlabel("epoch")
             plt.ylabel("avg loss")
             loss_line, = plt.plot(_i, _loss, 'b')
@@ -276,8 +276,8 @@ class FNN:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description=__doc__)
-    parser.add_argument('--data_path', default='./data/Iris', help='data path')
-    parser.add_argument('--lr', default=0.05, type=float, help='learning rate')
+    parser.add_argument('--data_path', default='./data/Exam', help='data path')
+    parser.add_argument('--lr', default=0.01, type=float, help='learning rate')
     parser.add_argument('--epoch', default=1000, type=int, help='epoch')
     parser.add_argument('--batch_size', default=32, type=int, help='batch_size')
     parser.add_argument('--lr_decay', default=0.9, type=float, help='learning rate decay')
