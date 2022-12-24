@@ -1,26 +1,12 @@
 import numpy as np
 
-from utils.LoadData import load
+
 from utils.eval import eval
 from utils.word2index import word2index
+from utils.init import init
 
 Classes = ['电脑', '法律', '教育', '经济', '体育', '政治']
 N = len(Classes)
-
-
-def init(data):
-    BOW = []
-    Mu = np.zeros((N, 1))
-    for i in range(N):
-        Mu[i][0] = len(data[i])
-        for j in range(len(data[i])):
-            for k in range(len(data[i][j])):
-                word = data[i][j][k]
-                if word not in BOW:
-                    BOW.append(word)
-    _ = np.sum(Mu)
-    pai = Mu / _
-    return BOW, pai
 
 
 def get(BOW, w2i, data):
@@ -40,10 +26,28 @@ def get(BOW, w2i, data):
     return theta
 
 
+def _a(BOW, w2i, data, label, stop_words):
+    theta = np.zeros((N, len(BOW)))
+    for i in range(len(data)):
+        _count = np.zeros((N, len(BOW)))
+        _used = np.zeros(len(BOW))
+        for j in range(len(data[i])):
+            word = data[i][j]
+            if word in stop_words:
+                continue
+            index = w2i[word]
+            if _used[index] == 0:
+                _used[index] = 1
+                _count[label[i], index] += 1
+        theta += _count
+    for i in range(N):
+        theta[i] = (theta[i] + 1) / (label.count(i) + 2)
+    return theta
+
+
 if __name__ == '__main__':
-    data_train, data_test = load('./Tsinghua')
-    BOW, pai = init(data_train)
+    BOW, pai, data, label, num, stop_words = init()
     w2i = word2index(BOW)
-    theta = get(BOW, w2i, data_train)
-    acc = eval(data_test, pai, BOW, theta, t=1.5, mood=2)
+    theta = _a(BOW, w2i, data[:num], label, stop_words)
+    acc = eval(data[num:], pai, BOW, theta, label[num:], stop_words, w2i, t=2, mood=2, )
     print("acc:{}".format(acc))

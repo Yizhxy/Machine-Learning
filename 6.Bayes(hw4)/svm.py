@@ -1,42 +1,102 @@
-import argparse
-
 import numpy as np
+import libsvm
 from libsvm.svm import *
 from libsvm.svmutil import *
+import json
 
-from Multinomial import load
-from FW import feature_select
-from Bernoulli import word2index
-from Bernoulli import init
+import re
+
+Classes = ['电脑', '法律', '教育', '经济', '体育', '政治']
+N = len(Classes)
 
 
-def mySVM(x, y):
-    problem = svm_problem(y, x, isKernel=True)
-    # 采用核函数-t 2,5倍交叉验证模式-v 5
-    options = svm_parameter('-s 0 -t 2 -v 5 -c 0.1')
-    # 训练
-    model = svm_train(problem, options)
-    return model
+def create(data, stop_words, w2i):
+    Feature_bool = np.zeros(len(w2i))
+    Feature_tf = np.zeros(len(w2i))
+    xiangliang = np.zeros(len(w2i))
+    for j in range(len(data)):
+        if data[j] in stop_words:
+            continue
+        else:
+            index = w2i[data[j]]
+            xiangliang[index] += 1
+            if Feature_bool[index] == 0:
+                Feature_bool[index] = 1
+            continue
+    fenmu = sum(xiangliang)
+    for j in range(len(data)):
+        Feature_tf[j] = xiangliang[j] * 100 / fenmu
+    return xiangliang, Feature_bool, Feature_tf
+
+
+def word2index(BOW):
+    word2index_map = {}
+    for i in range(len(BOW)):
+        word = BOW[i]
+        word2index_map.setdefault(word, i)
+    return word2index_map
+
+
+def savejson(BOW, data, label, num, stop_words):
+    filename = 'BOW.json'
+    with open(filename, 'w') as file_obj:
+        json.dump(BOW, file_obj)
+    filename = 'data.json'
+    with open(filename, 'w') as file_obj:
+        json.dump(data, file_obj)
+    filename = 'label.json'
+    with open(filename, 'w') as file_obj:
+        json.dump(label, file_obj)
+    filename = 'num.json'
+    with open(filename, 'w') as file_obj:
+        json.dump(num, file_obj)
+    filename = 'stop_words.json'
+    with open(filename, 'w') as file_obj:
+        json.dump(stop_words, file_obj)
+
+
+def loadjson():
+    filename = 'BOW.json'
+    with open(filename, 'r', encoding='utf8') as fp:
+        BOW = json.load(fp)
+
+    filename = 'data.json'
+    with open(filename, 'r', encoding='utf8') as fp:
+        data = json.load(fp)
+
+    filename = 'label.json'
+    with open(filename, 'r', encoding='utf8') as fp:
+        label = json.load(fp)
+
+    filename = 'num.json'
+    with open(filename, 'r', encoding='utf8') as fp:
+        num = json.load(fp)
+
+    filename = 'stop_words.json'
+    with open(filename, 'r', encoding='utf8') as fp:
+        stop_words = json.load(fp)
+    return BOW, data, label, num, stop_words
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description=__doc__)
-    parser.add_argument('--mood', default=2, type=int, help='data path')
-    args = parser.parse_args()
-    data_train, data_test = load('./Tsinghua')
-    BOW, pai = init(data_train)
+
+    BOW, data, label, num, stop_words = loadjson()
     w2i = word2index(BOW)
-    data_num = 0
-    for i in range(6):
-        data_num += len(data_train[i])
-    x = np.zeros((data_num, len(BOW)))
-    y = np.zeros(data_num)
-    ter = 0
-    for i in range(6):
-        features = feature_select(BOW, data_train[i], w2i, mood=args.mood)  # 所有词的TF值
-        x[i] = features
-        for j in range(len(data_train[i])):
-            y[ter] = i
-            ter += 1
-    mySVM(x, y)
+
+    xiangliang = np.zeros((len(data), len(BOW)))
+
+    bool = np.zeros((len(data), len(BOW)))
+    tf = np.zeros((len(data), len(BOW)))
+    labelbool = []
+    for i in range(0, len(data)):
+        print('load data' + str((i + 1) / len(data)))
+        xiangliang[i], bool[i], tf[i] = create(data[i], stop_words, w2i)
+
+    print("tf特征表示")
+    options = svm_parameter('-s 0 -t 2 -v 5 -c 0.2')
+    problemtf = svm_problem(label[num:], tf[num:], isKernel=True)
+    modeltf = svm_train(problemtf, options)
+    print("bool特征表示")
+    options = svm_parameter('-s 0 -t 0 -v 5 -c 0.1')
+    problembool = svm_problem(label[num:], bool[num:], isKernel=True)
+    modelbool = svm_train(problembool, options)

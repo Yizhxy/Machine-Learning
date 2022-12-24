@@ -3,9 +3,9 @@ from collections import defaultdict
 import math
 import operator
 import numpy as np
-from utils.LoadData import load
+from utils.eval import eval
 from utils.word2index import word2index
-from Bernoulli import init
+from utils.init import init
 
 
 def feature_select(BOW, list_words, w2i, mood):
@@ -14,7 +14,10 @@ def feature_select(BOW, list_words, w2i, mood):
     doc_frequency = defaultdict(int)
     for word_list in list_words:
         for i in word_list:
-            index = w2i[i]
+            if i in BOW:
+                index = w2i[i]
+            else:
+                continue
             if mood == 1:
                 frequency[index] = 1
                 doc_frequency[i] += 1
@@ -29,9 +32,6 @@ def feature_select(BOW, list_words, w2i, mood):
 
 
 if __name__ == '__main__':
-    data_train, data_test = load('./Tsinghua')
-    BOW, pai = init(data_train)
+    BOW, pai, data, label, num, stop_words = init()
     w2i = word2index(BOW)
-    for i in range(6):
-        features = feature_select(BOW, data_train[i], w2i, mood=2)  # 所有词的TF值
-        print(features)
+    feature = feature_select(BOW, data, w2i, mood=1)
